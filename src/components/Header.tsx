@@ -10,7 +10,7 @@ const Header = () => {
         <img 
           src="/lovable-uploads/1fb86a2c-b32d-417b-9b07-1c8d41e1fc55.png" 
           alt="Motion Log" 
-          className="h-10 w-auto"
+          className="h-20 w-auto"
         />
       </Link>
       
