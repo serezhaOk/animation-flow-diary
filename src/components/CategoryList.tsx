@@ -3,9 +3,12 @@ import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 const categories = [
-  { id: 'gestures', name: 'Gestures' },
-  { id: 'ios', name: 'iOS' },
-  { id: 'microanimations', name: 'MicroInteractions' }
+  { id: 'transitions', name: 'Transitions' },
+  { id: 'microanimations', name: 'Micro Animations' },
+  { id: 'camera', name: 'Camera' },
+  { id: 'navigation', name: 'Navigation' },
+  { id: 'morphing', name: 'Morphing' },
+  { id: 'gestures', name: 'Gestures' }
 ];
 
 const CategoryList = () => {
@@ -13,7 +16,7 @@ const CategoryList = () => {
   const currentPath = location.pathname.split('/')[1] || 'gestures';
 
   return (
-    <div className="category-list bg-black bg-opacity-50 backdrop-blur-sm p-4 rounded-lg">
+    <div className="category-list fixed bottom-8 left-8 bg-black bg-opacity-50 backdrop-blur-sm p-4 rounded-lg z-10">
       <ul className="space-y-3">
         {categories.map(category => (
           <li key={category.id}>

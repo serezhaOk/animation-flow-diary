@@ -5,6 +5,7 @@ import { Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 import { useBookmarks } from '@/hooks/useBookmarks';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Animation } from '@/types/animations';
 
 interface VideoCardProps {
@@ -17,9 +18,10 @@ const VideoCard: React.FC<VideoCardProps> = ({ animation, categoryId }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isHovering, setIsHovering] = useState(false);
   const { isBookmarked, toggleBookmark } = useBookmarks(animation.id);
+  const isMobile = useIsMobile();
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!videoRef.current || !containerRef.current) return;
+    if (!videoRef.current || !containerRef.current || isMobile) return;
     
     const rect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -33,13 +35,34 @@ const VideoCard: React.FC<VideoCardProps> = ({ animation, categoryId }) => {
     const video = videoRef.current;
     if (!video) return;
     
-    if (isHovering) {
-      video.pause();
-    } else {
-      video.currentTime = 0;
-      video.play().catch(e => console.log("Auto-play prevented:", e));
+    // For desktop: Handle hover scrubbing
+    if (!isMobile) {
+      if (isHovering) {
+        video.pause();
+      } else {
+        video.currentTime = 0;
+        video.play().catch(e => console.log("Auto-play prevented:", e));
+      }
+    } 
+    // For mobile: Auto-play videos
+    else {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              video.play().catch(e => console.log("Mobile auto-play prevented:", e));
+            } else {
+              video.pause();
+            }
+          });
+        },
+        { threshold: 0.5 }
+      );
+      
+      observer.observe(video);
+      return () => observer.disconnect();
     }
-  }, [isHovering]);
+  }, [isHovering, isMobile]);
 
   return (
     <div className="my-16 md:my-24">
@@ -53,8 +76,8 @@ const VideoCard: React.FC<VideoCardProps> = ({ animation, categoryId }) => {
           <div 
             ref={containerRef}
             className="iphone-screen video-container" 
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}
+            onMouseEnter={() => !isMobile && setIsHovering(true)}
+            onMouseLeave={() => !isMobile && setIsHovering(false)}
             onMouseMove={handleMouseMove}
           >
             <video 

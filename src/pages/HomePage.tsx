@@ -4,7 +4,7 @@ import VideoCard from '@/components/VideoCard';
 import { useAnimations } from '@/hooks/useAnimations';
 
 const HomePage = () => {
-  const { categoryId = 'gestures' } = useParams<{ categoryId?: string }>();
+  const { categoryId = 'transitions' } = useParams<{ categoryId?: string }>();
   const { animations, loading, error } = useAnimations(categoryId);
 
   if (loading) {
