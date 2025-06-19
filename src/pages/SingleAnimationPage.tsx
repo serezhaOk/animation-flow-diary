@@ -1,12 +1,11 @@
 
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Bookmark } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAnimations } from '@/hooks/useAnimations';
 import { useBookmarks } from '@/hooks/useBookmarks';
-import { Animation } from '@/types/animations';
 
 const SingleAnimationPage = () => {
   const { categoryId, animationId } = useParams<{ categoryId: string, animationId: string }>();
@@ -15,8 +14,6 @@ const SingleAnimationPage = () => {
   const navigate = useNavigate();
   
   const videoRef = useRef<HTMLVideoElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [isHovering, setIsHovering] = useState(false);
   
   const animation = animations.find(a => a.id === animationId);
   
@@ -26,28 +23,35 @@ const SingleAnimationPage = () => {
     }
   }, [animation, animations, navigate]);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!videoRef.current || !containerRef.current) return;
-    
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const width = rect.width;
-    const percent = Math.max(0, Math.min(1, x / width));
-    
-    videoRef.current.currentTime = percent * videoRef.current.duration;
-  };
-
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    
-    if (isHovering) {
-      video.pause();
-    } else {
-      video.currentTime = 0;
-      video.play().catch(e => console.log("Auto-play prevented:", e));
+
+    // iOS compatibility - play then pause
+    video.play();
+    video.pause();
+
+    function handleMove(e: MouseEvent | TouchEvent) {
+      if (!video) return;
+      
+      const rect = video.getBoundingClientRect();
+      const clientX = e instanceof TouchEvent ? e.touches[0].clientX : e.clientX;
+      const x = clientX - rect.left;
+      const percentX = x / rect.width;
+      
+      if (video.duration && !isNaN(video.duration)) {
+        video.currentTime = percentX * video.duration;
+      }
     }
-  }, [isHovering]);
+
+    video.addEventListener("mousemove", handleMove);
+    video.addEventListener("touchmove", handleMove);
+
+    return () => {
+      video.removeEventListener("mousemove", handleMove);
+      video.removeEventListener("touchmove", handleMove);
+    };
+  }, []);
 
   if (!animation) {
     return <div className="mt-32 text-center">Loading...</div>;
@@ -82,13 +86,7 @@ const SingleAnimationPage = () => {
         
         <div className="iphone-mockup">
           <div className="iphone-notch"></div>
-          <div 
-            ref={containerRef}
-            className="iphone-screen video-container" 
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}
-            onMouseMove={handleMouseMove}
-          >
+          <div className="iphone-screen video-container">
             <video 
               ref={videoRef}
               src={animation.videoUrl}

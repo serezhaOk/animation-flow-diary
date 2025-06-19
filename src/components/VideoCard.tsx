@@ -1,5 +1,5 @@
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -15,37 +15,35 @@ interface VideoCardProps {
 
 const VideoCard: React.FC<VideoCardProps> = ({ animation, categoryId }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [isHovering, setIsHovering] = useState(false);
   const { isBookmarked, toggleBookmark } = useBookmarks(animation.id);
   const isMobile = useIsMobile();
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!videoRef.current || !containerRef.current || isMobile) return;
-    
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const width = rect.width;
-    const percent = Math.max(0, Math.min(1, x / width));
-    
-    videoRef.current.currentTime = percent * videoRef.current.duration;
-  };
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    
-    // For desktop: Handle hover scrubbing
-    if (!isMobile) {
-      if (isHovering) {
-        video.pause();
-      } else {
-        video.currentTime = 0;
-        video.play().catch(e => console.log("Auto-play prevented:", e));
+
+    // iOS compatibility - play then pause
+    video.play();
+    video.pause();
+
+    function handleMove(e: MouseEvent | TouchEvent) {
+      if (!video) return;
+      
+      const rect = video.getBoundingClientRect();
+      const clientX = e instanceof TouchEvent ? e.touches[0].clientX : e.clientX;
+      const x = clientX - rect.left;
+      const percentX = x / rect.width;
+      
+      if (video.duration && !isNaN(video.duration)) {
+        video.currentTime = percentX * video.duration;
       }
-    } 
-    // For mobile: Auto-play videos
-    else {
+    }
+
+    video.addEventListener("mousemove", handleMove);
+    video.addEventListener("touchmove", handleMove);
+
+    // Auto-play on mobile when in viewport
+    if (isMobile) {
       const observer = new IntersectionObserver(
         (entries) => {
           entries.forEach(entry => {
@@ -60,9 +58,19 @@ const VideoCard: React.FC<VideoCardProps> = ({ animation, categoryId }) => {
       );
       
       observer.observe(video);
-      return () => observer.disconnect();
+      
+      return () => {
+        video.removeEventListener("mousemove", handleMove);
+        video.removeEventListener("touchmove", handleMove);
+        observer.disconnect();
+      };
     }
-  }, [isHovering, isMobile]);
+
+    return () => {
+      video.removeEventListener("mousemove", handleMove);
+      video.removeEventListener("touchmove", handleMove);
+    };
+  }, [isMobile]);
 
   return (
     <div className="my-16 md:my-24">
@@ -73,15 +81,10 @@ const VideoCard: React.FC<VideoCardProps> = ({ animation, categoryId }) => {
         
         <div className="iphone-mockup">
           <div className="iphone-notch"></div>
-          <div 
-            ref={containerRef}
-            className="iphone-screen video-container" 
-            onMouseEnter={() => !isMobile && setIsHovering(true)}
-            onMouseLeave={() => !isMobile && setIsHovering(false)}
-            onMouseMove={handleMouseMove}
-          >
+          <div className="iphone-screen video-container">
             <video 
               ref={videoRef}
+              id={`video-${animation.id}`}
               src={animation.videoUrl}
               loop
               muted
